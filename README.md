@@ -1,116 +1,116 @@
-# ESP32 + GTW-08 — pompe à chaleur Remeha / Intergas / Baxi / Brötje
+# ESP32 + GTW-08 — Remeha / Intergas / Baxi / Brötje heat pump
 
-Firmware [ESPHome](https://esphome.io/) pour lire et piloter une pompe à chaleur (ou chaudière Ace) via la passerelle **Modbus RTU GTW-08**, depuis [Home Assistant](https://www.home-assistant.io/).
+[ESPHome](https://esphome.io/) firmware to read and control a heat pump (or Ace boiler) through the **GTW-08 Modbus RTU gateway**, from [Home Assistant](https://www.home-assistant.io/).
 
 <p align="center">
-  <img src="images/hardware.jpg" alt="ESP32, module MAX485 et passerelle GTW-08" width="720">
+  <img src="images/hardware.jpg" alt="ESP32, MAX485 module and GTW-08 gateway" width="720">
 </p>
 
-La config expose températures, pression, état PAC / ECS / froid, consigne, courbe de chauffe, et des switchs (chauffage, ECS, froid).
+The config exposes temperatures, pressure, heat-pump / DHW / cooling state, setpoints, heating curve, and switches (heating, DHW, cooling).
 
 ---
 
-## À quoi ça sert
+## What it is for
 
-Sans cette passerelle, la PAC n’est parlante que via le cloud constructeur. Le **GTW-08** sort un bus **Modbus RTU (RS-485)**. L’ESP32 le relie au Wi‑Fi et à l’API native Home Assistant (local, sans cloud).
+Without this gateway the heat pump only talks through the vendor cloud. **GTW-08** exposes **Modbus RTU (RS-485)**. The ESP32 bridges that bus to Wi‑Fi and the native Home Assistant API (local, no cloud).
 
-Cas d’usage :
+Typical uses:
 
-- tableau de bord (départ / retour, delta T, extérieur, ballon ECS)
-- coupure chauffage / ECS selon tarif, présence ou PV
-- alerte pression d’eau basse, défaut, besoin de service
-- consigne pièce, pente de courbe, consigne ECS depuis HA
+- dashboard (flow / return, delta T, outdoor, DHW tank)
+- cut heating / DHW from tariff, occupancy or PV
+- alerts for low water pressure, faults, service required
+- room setpoint, heating-curve slope, DHW setpoint from HA
 
-Compatible avec les produits **Ace** (T-Control / S-Control) qui acceptent un GTW-08 : Remeha Elga Ace, Mercuria Ace, Eria Tower, Intergas, Baxi, Brötje, De Dietrich… (même famille BDR Thermea).
+Works with **Ace** products (T-Control / S-Control) that accept a GTW-08: Remeha Elga Ace, Mercuria Ace, Eria Tower, Intergas, Baxi, Brötje, De Dietrich, and other BDR Thermea siblings.
 
 ---
 
-## Matériel
+## Hardware
 
-| Élément | Rôle | Lien |
+| Part | Role | Link |
 | --- | --- | --- |
-| **GTW-08** (Remeha 7721982 / ML638) | Convertit le bus interne en Modbus RTU | [Fiche produit](https://www.alternative-haustechnik.de/remeha-schnittstelle-modbus-rtu-gateway-gtw-08/7721982) · [Amazon](https://www.amazon.co.uk/Remeha-Modbus-interface-Gateway-GTW-08/dp/B0971GM23N) |
-| **ESP32 DevKit** | Wi‑Fi + UART | n’importe quel ESP32 30 broches |
-| **MAX485 / TTL-RS485** | UART 3,3 V → RS-485 | module 3,3 V (pas un 5 V seul) |
-| Alim 5 V USB | ESP32 | — |
-| Paire torsadée | A / B Modbus | câble alarme / bus, 2 fils |
+| **GTW-08** (Remeha 7721982 / ML638) | Internal bus → Modbus RTU | [Product page](https://www.alternative-haustechnik.de/remeha-schnittstelle-modbus-rtu-gateway-gtw-08/7721982) · [Amazon](https://www.amazon.co.uk/Remeha-Modbus-interface-Gateway-GTW-08/dp/B0971GM23N) |
+| **ESP32 DevKit** | Wi‑Fi + UART | any 30-pin ESP32 |
+| **MAX485 / TTL-RS485** | 3.3 V UART → RS-485 | use a 3.3 V module |
+| 5 V USB supply | ESP32 | — |
+| Twisted pair | Modbus A / B | alarm / bus cable, 2 wires |
 
-Doc constructeur : [configuratiehandleiding GTW-08 (PDF)](https://tools.remeha.nl/wp-content/uploads/sites/11/2024/07/configuratiehandleiding-GTW-08.pdf).
+Vendor doc: [GTW-08 configuration guide (PDF)](https://tools.remeha.nl/wp-content/uploads/sites/11/2024/07/configuratiehandleiding-GTW-08.pdf).
 
-Projets proches :
+Related projects:
 
 - [Imanol82 — Baxi/Dietrich/Remeha → ESP32](https://github.com/Imanol82/Baxi-Dietrich-Remeha-to-Home-Assistant-with-an-ESP32)
-- [houthacker/remeha-modbus](https://github.com/houthacker/remeha-modbus) (Modbus TCP, autre chemin)
+- [houthacker/remeha-modbus](https://github.com/houthacker/remeha-modbus) (Modbus TCP, different path)
 
 <p align="center">
-  <img src="images/gtw08-install.jpg" alt="GTW-08 installé dans le tableau de la PAC" width="480">
+  <img src="images/gtw08-install.jpg" alt="GTW-08 installed in the heat-pump cabinet" width="480">
 </p>
 
-*Exemple d’installation du module dans le tableau de la PAC (crédit : projet Imanol82).*
+*Example of the module installed in the heat-pump cabinet (credit: Imanol82 project).*
 
 ---
 
-## Câblage
+## Wiring
 
-Modbus de cette config :
+Modbus settings used here:
 
-| Paramètre | Valeur |
+| Parameter | Value |
 | --- | --- |
-| Vitesse | **9600** 8N1 |
-| Slave | **0x64 (100)** — molette du GTW-08 |
-| ESP32 TX | **GPIO17** → DI / TX du MAX485 |
-| ESP32 RX | **GPIO16** → RO / RX du MAX485 |
-| MAX485 A / B | bornes A / B du GTW-08 |
-| MAX485 VCC / GND | 3,3 V et GND ESP32 |
-| DE+RE | souvent reliés à 3,3 V (émission permanente) ou à un GPIO si le module l’exige |
+| Speed | **9600** 8N1 |
+| Slave | **0x64 (100)** — GTW-08 rotary switch |
+| ESP32 TX | **GPIO17** → DI / TX on the MAX485 |
+| ESP32 RX | **GPIO16** → RO / RX on the MAX485 |
+| MAX485 A / B | GTW-08 A / B terminals |
+| MAX485 VCC / GND | ESP32 3.3 V and GND |
+| DE+RE | often tied to 3.3 V (always transmit) or to a GPIO if the module needs it |
 
 ```
-PAC Ace  --(bus interne)-->  GTW-08  --RS-485 A/B-->  MAX485  --UART-->  ESP32  --Wi-Fi-->  Home Assistant
+Heat pump Ace  --(internal bus)-->  GTW-08  --RS-485 A/B-->  MAX485  --UART-->  ESP32  --Wi-Fi-->  Home Assistant
 ```
 
 <p align="center">
-  <img src="images/wiring-reference.png" alt="Schéma de câblage ESP32 MAX485 GTW-08" width="640">
+  <img src="images/wiring-reference.png" alt="ESP32 MAX485 GTW-08 wiring diagram" width="640">
 </p>
 
-*Schéma de référence (projet Imanol82). Ici TX=GPIO17, RX=GPIO16, baud 9600, slave 100.*
+*Reference diagram (Imanol82 project). This repo uses TX=GPIO17, RX=GPIO16, 9600 baud, slave 100.*
 
-Si rien ne répond : inverser **A et B**, vérifier l’adresse (molette = 100), et que le GTW-08 est bien alimenté par le bus interne de la PAC.
+If nothing answers: swap **A and B**, check the address (rotary switch = 100), and confirm the GTW-08 is powered from the heat-pump internal bus.
 
 ---
 
-## Installation ESPHome
+## ESPHome setup
 
-1. Installer [ESPHome](https://esphome.io/) (add-on HA ou CLI).
-2. Copier `esp32-pac.yaml` et `secrets.yaml.example` → `secrets.yaml`.
-3. Remplir Wi‑Fi, mot de passe OTA, hotspot, et une clé API :
+1. Install [ESPHome](https://esphome.io/) (HA add-on or CLI).
+2. Copy `esp32-pac.yaml` and `secrets.yaml.example` → `secrets.yaml`.
+3. Fill in Wi‑Fi, OTA password, fallback hotspot, and an API key:
 
 ```bash
 openssl rand -base64 32
 ```
 
-4. Premier flash en USB, ensuite OTA.
+4. First flash over USB, then OTA.
 
 ```bash
 esphome run esp32-pac.yaml
 ```
 
-5. Dans Home Assistant : **Paramètres → Appareils → Ajouter → ESPHome** (découverte auto).
+5. In Home Assistant: **Settings → Devices & services → Add → ESPHome** (auto-discovery).
 
 ---
 
-## Entités exposées
+## Exposed entities
 
-**Capteurs :** puissance %, T° extérieure, départ / retour PAC, delta T, ballon ECS, consigne ECS, T° pièce, consigne chauffage, pression d’eau, vitesse circulateur, code défaut.
+**Sensors:** output %, outdoor temperature, heat-pump flow / return, delta T, DHW tank, DHW setpoint, room temperature, heating setpoint, water pressure, pump speed, error code.
 
-**Binaires :** PAC on, appoint 1/2, appoint ECS, service, pression basse, défaut, CH / ECS / froid actifs, pompes.
+**Binary sensors:** heat pump on, backup 1/2, DHW backup, service, low pressure, fault, CH / DHW / cooling active, pumps.
 
-**Commandes :** activer chauffage / ECS / froid ; consigne pièce ; pente et pied de courbe ; consigne ECS ; hystérésis ; modes chauffage / ECS (programme, manuel, hors-gel) ; T° extérieure de coupure.
+**Controls:** enable heating / DHW / cooling; room setpoint; curve slope and foot point; DHW setpoint; hysteresis; heating / DHW modes (schedule, manual, frost protection); outdoor cut-off temperatures.
 
-Les adresses Modbus suivent la table GTW-08 (holding). Ne change le slave / le baud que si ta molette n’est pas sur 100.
+Modbus addresses follow the GTW-08 holding-register table. Only change slave / baud if your rotary switch is not set to 100.
 
 ---
 
-## Licence
+## License
 
-MIT — voir `LICENSE`.
-Le GTW-08, Remeha, Intergas, Baxi et Brötje restent des marques de leurs propriétaires.
+MIT — see `LICENSE`.
+GTW-08, Remeha, Intergas, Baxi and Brötje are trademarks of their owners.
