@@ -1,0 +1,725 @@
+esphome:
+  name: esp32-pac
+  friendly_name: esp32-pac
+
+esp32:
+  board: esp32dev
+  framework:
+    type: esp-idf
+    advanced:
+      minimum_chip_revision: "3.1"
+      sram1_as_iram: true
+
+logger:
+  level: INFO
+  logs:
+    modbus: INFO
+    modbus_controller: INFO
+
+api:
+  encryption:
+    key: !secret api_encryption_key
+
+ota:
+  - platform: esphome
+    password: !secret ota_password
+
+wifi:
+  ssid: !secret wifi_ssid
+  password: !secret wifi_password
+  ap:
+    ssid: "esp32-pac Fallback Hotspot"
+    password: !secret fallback_password
+
+captive_portal:
+
+time:
+  - platform: homeassistant
+    id: homeassistant_time
+
+uart:
+  id: mod_bus
+  tx_pin: GPIO17
+  rx_pin: GPIO16
+  baud_rate: 9600
+  data_bits: 8
+  parity: NONE
+  stop_bits: 1
+
+modbus:
+  id: gtw08_modbus
+
+modbus_controller:
+  - id: gtw08
+    address: 0x64
+    modbus_id: gtw08_modbus
+    setup_priority: -10
+    update_interval: 20s
+    command_throttle: 120ms
+
+############################## SENSORS ###############################
+sensor:
+  - platform: modbus_controller
+    modbus_controller_id: gtw08
+    name: "Actual Output Power"
+    address: 272
+    register_type: holding
+    value_type: U_WORD
+    unit_of_measurement: "%"
+    accuracy_decimals: 0
+    device_class: power_factor
+    state_class: measurement
+    icon: "mdi:gauge"
+
+  - platform: modbus_controller
+    modbus_controller_id: gtw08
+    name: "Outdoor Temperature"
+    address: 384
+    register_type: holding
+    value_type: S_WORD
+    unit_of_measurement: "°C"
+    accuracy_decimals: 2
+    device_class: temperature
+    state_class: measurement
+    filters:
+      - multiply: 0.01
+
+  - platform: modbus_controller
+    modbus_controller_id: gtw08
+    name: "System Flow Temperature"
+    address: 400
+    register_type: holding
+    value_type: S_WORD
+    unit_of_measurement: "°C"
+    accuracy_decimals: 2
+    device_class: temperature
+    state_class: measurement
+    filters:
+      - multiply: 0.01
+      - filter_out: -327.68
+      - filter_out: 327.67
+
+  - platform: modbus_controller
+    modbus_controller_id: gtw08
+    name: "Heat Pump Flow Temperature"
+    id: hp_flow_temp
+    address: 403
+    register_type: holding
+    value_type: S_WORD
+    unit_of_measurement: "°C"
+    accuracy_decimals: 2
+    device_class: temperature
+    state_class: measurement
+    filters:
+      - multiply: 0.01
+
+  - platform: modbus_controller
+    modbus_controller_id: gtw08
+    name: "Heat Pump Return Temperature"
+    id: hp_return_temp
+    address: 404
+    register_type: holding
+    value_type: S_WORD
+    unit_of_measurement: "°C"
+    accuracy_decimals: 2
+    device_class: temperature
+    state_class: measurement
+    filters:
+      - multiply: 0.01
+
+  - platform: modbus_controller
+    modbus_controller_id: gtw08
+    name: "DHW Tank Temperature"
+    address: 1631
+    register_type: holding
+    value_type: S_WORD
+    unit_of_measurement: "°C"
+    accuracy_decimals: 2
+    device_class: temperature
+    state_class: measurement
+    filters:
+      - multiply: 0.01
+
+  - platform: modbus_controller
+    modbus_controller_id: gtw08
+    name: "DHW Measured Temperature"
+    address: 1612
+    register_type: holding
+    value_type: S_WORD
+    unit_of_measurement: "°C"
+    accuracy_decimals: 2
+    device_class: temperature
+    state_class: measurement
+    filters:
+      - multiply: 0.01
+      - filter_out: -327.68
+      - filter_out: 327.67
+
+  - platform: modbus_controller
+    modbus_controller_id: gtw08
+    name: "DHW Active Setpoint"
+    address: 1613
+    register_type: holding
+    value_type: U_WORD
+    unit_of_measurement: "°C"
+    accuracy_decimals: 2
+    device_class: temperature
+    state_class: measurement
+    icon: "mdi:thermometer-water"
+    filters:
+      - multiply: 0.01
+      - filter_out: 0
+
+  - platform: modbus_controller
+    modbus_controller_id: gtw08
+    name: "DHW Stored Setpoint"
+    address: 408
+    register_type: holding
+    value_type: U_WORD
+    unit_of_measurement: "°C"
+    accuracy_decimals: 2
+    device_class: temperature
+    state_class: measurement
+    icon: "mdi:thermometer-water"
+    filters:
+      - multiply: 0.01
+
+  - platform: modbus_controller
+    modbus_controller_id: gtw08
+    name: "Room Temperature"
+    address: 1104
+    register_type: holding
+    value_type: S_WORD
+    unit_of_measurement: "°C"
+    accuracy_decimals: 1
+    device_class: temperature
+    state_class: measurement
+    filters:
+      - multiply: 0.1
+
+  - platform: modbus_controller
+    modbus_controller_id: gtw08
+    name: "CH Active Setpoint"
+    address: 1101
+    register_type: holding
+    value_type: U_WORD
+    unit_of_measurement: "°C"
+    accuracy_decimals: 2
+    device_class: temperature
+    state_class: measurement
+    icon: "mdi:thermometer"
+    filters:
+      - multiply: 0.01
+      - filter_out: 0
+
+  - platform: modbus_controller
+    modbus_controller_id: gtw08
+    name: "Water Pressure"
+    address: 409
+    register_type: holding
+    value_type: U_WORD
+    unit_of_measurement: "bar"
+    accuracy_decimals: 1
+    device_class: pressure
+    state_class: measurement
+    filters:
+      - multiply: 0.1
+
+  - platform: modbus_controller
+    modbus_controller_id: gtw08
+    name: "Pump Speed"
+    address: 459
+    register_type: holding
+    value_type: U_WORD
+    unit_of_measurement: "%"
+    accuracy_decimals: 1
+    state_class: measurement
+    icon: "mdi:pump"
+    filters:
+      - multiply: 0.1
+
+  - platform: modbus_controller
+    modbus_controller_id: gtw08
+    name: "Error Code"
+    address: 277
+    register_type: holding
+    value_type: U_WORD
+    accuracy_decimals: 0
+    icon: "mdi:alert-circle"
+    filters:
+      - filter_out: 0
+      - filter_out: 65535
+
+  - platform: template
+    name: "Delta T"
+    unit_of_measurement: "°C"
+    accuracy_decimals: 2
+    device_class: temperature
+    state_class: measurement
+    icon: "mdi:thermometer-lines"
+    lambda: |-
+      if (isnan(id(hp_flow_temp).state) || isnan(id(hp_return_temp).state)) {
+        return NAN;
+      }
+      return id(hp_flow_temp).state - id(hp_return_temp).state;
+
+############################## BINARY SENSORS ########################
+binary_sensor:
+  - platform: modbus_controller
+    modbus_controller_id: gtw08
+    name: "Heat Pump On"
+    address: 279
+    register_type: holding
+    bitmask: 0x02
+    icon: "mdi:heat-pump"
+
+  - platform: modbus_controller
+    modbus_controller_id: gtw08
+    name: "Electrical Backup 1 On"
+    address: 279
+    register_type: holding
+    bitmask: 0x04
+    icon: "mdi:flash"
+
+  - platform: modbus_controller
+    modbus_controller_id: gtw08
+    name: "Electrical Backup 2 On"
+    address: 279
+    register_type: holding
+    bitmask: 0x08
+    icon: "mdi:flash"
+
+  - platform: modbus_controller
+    modbus_controller_id: gtw08
+    name: "DHW Electrical Backup On"
+    address: 279
+    register_type: holding
+    bitmask: 0x10
+    icon: "mdi:flash"
+
+  - platform: modbus_controller
+    modbus_controller_id: gtw08
+    name: "Service Required"
+    address: 279
+    register_type: holding
+    bitmask: 0x20
+    icon: "mdi:wrench"
+    device_class: problem
+
+  - platform: modbus_controller
+    modbus_controller_id: gtw08
+    name: "Water Pressure Low"
+    address: 279
+    register_type: holding
+    bitmask: 0x80
+    icon: "mdi:water-alert"
+    device_class: problem
+
+  - platform: modbus_controller
+    modbus_controller_id: gtw08
+    name: "Error Present"
+    address: 531
+    register_type: holding
+    icon: "mdi:alert"
+    device_class: problem
+
+  - platform: modbus_controller
+    modbus_controller_id: gtw08
+    name: "CH Active"
+    address: 280
+    register_type: holding
+    bitmask: 0x20
+    icon: "mdi:radiator"
+
+  - platform: modbus_controller
+    modbus_controller_id: gtw08
+    name: "DHW Active"
+    address: 280
+    register_type: holding
+    bitmask: 0x10
+    icon: "mdi:water-boiler"
+
+  - platform: modbus_controller
+    modbus_controller_id: gtw08
+    name: "Cooling Active"
+    address: 280
+    register_type: holding
+    bitmask: 0x40
+    icon: "mdi:snowflake"
+
+  - platform: modbus_controller
+    modbus_controller_id: gtw08
+    name: "CH Pump Running"
+    address: 1110
+    register_type: holding
+    icon: "mdi:pump"
+
+  - platform: modbus_controller
+    modbus_controller_id: gtw08
+    name: "DHW Pump Running"
+    address: 1622
+    register_type: holding
+    icon: "mdi:pump"
+
+############################## SWITCHES ##############################
+switch:
+  - platform: modbus_controller
+    modbus_controller_id: gtw08
+    name: "Enable Heating"
+    id: enable_heating
+    address: 500
+    register_type: holding
+    use_write_multiple: true
+    bitmask: 1
+    icon: "mdi:radiator"
+
+  - platform: modbus_controller
+    modbus_controller_id: gtw08
+    name: "Enable DHW"
+    id: enable_dhw
+    address: 501
+    register_type: holding
+    use_write_multiple: true
+    bitmask: 1
+    icon: "mdi:water-boiler"
+
+  - platform: modbus_controller
+    modbus_controller_id: gtw08
+    name: "Enable Cooling"
+    id: enable_cooling
+    address: 503
+    register_type: holding
+    use_write_multiple: true
+    bitmask: 1
+    icon: "mdi:snowflake"
+
+############################## NUMBERS ###############################
+number:
+  - platform: modbus_controller
+    modbus_controller_id: gtw08
+    name: "Outdoor Temp Disable CH"
+    address: 386
+    use_write_multiple: false
+    unit_of_measurement: "°C"
+    device_class: temperature
+    min_value: 15
+    max_value: 30.5
+    step: 0.5
+    value_type: U_WORD
+    multiply: 100
+    icon: "mdi:thermometer-off"
+
+  - platform: modbus_controller
+    modbus_controller_id: gtw08
+    name: "Outdoor Temp Disable Cooling"
+    address: 387
+    use_write_multiple: false
+    unit_of_measurement: "°C"
+    device_class: temperature
+    min_value: 0
+    max_value: 15
+    step: 0.5
+    value_type: U_WORD
+    multiply: 100
+    icon: "mdi:thermometer-off"
+
+  - platform: modbus_controller
+    modbus_controller_id: gtw08
+    name: "Outdoor Temp Frost Protection"
+    address: 388
+    use_write_multiple: false
+    unit_of_measurement: "°C"
+    device_class: temperature
+    min_value: -30
+    max_value: 20
+    step: 0.5
+    value_type: S_WORD
+    multiply: 100
+    icon: "mdi:snowflake-alert"
+
+  - platform: modbus_controller
+    modbus_controller_id: gtw08
+    name: "Manual Room Setpoint"
+    address: 664
+    use_write_multiple: false
+    unit_of_measurement: "°C"
+    device_class: temperature
+    min_value: 5
+    max_value: 30
+    step: 0.5
+    value_type: U_WORD
+    multiply: 10
+    icon: "mdi:thermostat"
+
+  - platform: modbus_controller
+    modbus_controller_id: gtw08
+    name: "Flow Setpoint Max"
+    address: 672
+    use_write_multiple: false
+    unit_of_measurement: "°C"
+    device_class: temperature
+    min_value: 7
+    max_value: 100
+    step: 0.5
+    value_type: U_WORD
+    multiply: 100
+    icon: "mdi:thermometer-high"
+
+  - platform: modbus_controller
+    modbus_controller_id: gtw08
+    name: "Cooling Setpoint"
+    address: 673
+    use_write_multiple: false
+    unit_of_measurement: "°C"
+    device_class: temperature
+    min_value: 11
+    max_value: 23
+    step: 0.5
+    value_type: U_WORD
+    multiply: 100
+    icon: "mdi:snowflake-thermometer"
+
+  - platform: modbus_controller
+    modbus_controller_id: gtw08
+    name: "Heating Curve Slope"
+    address: 674
+    use_write_multiple: false
+    min_value: 0
+    max_value: 4
+    step: 0.1
+    value_type: U_WORD
+    multiply: 10
+    icon: "mdi:chart-line"
+
+  - platform: modbus_controller
+    modbus_controller_id: gtw08
+    name: "Heating Curve Foot Point"
+    address: 675
+    use_write_multiple: false
+    unit_of_measurement: "°C"
+    device_class: temperature
+    min_value: 15
+    max_value: 90
+    step: 0.5
+    value_type: U_WORD
+    multiply: 10
+    icon: "mdi:chart-bell-curve"
+
+  - platform: modbus_controller
+    modbus_controller_id: gtw08
+    name: "Pump Post-run"
+    address: 687
+    use_write_multiple: false
+    unit_of_measurement: "min"
+    min_value: 0
+    max_value: 20
+    step: 1
+    value_type: U_WORD
+    multiply: 1
+    icon: "mdi:timer-outline"
+
+  - platform: modbus_controller
+    modbus_controller_id: gtw08
+    name: "DHW Setpoint"
+    address: 1177
+    use_write_multiple: false
+    unit_of_measurement: "°C"
+    device_class: temperature
+    min_value: 40
+    max_value: 65
+    step: 0.5
+    value_type: U_WORD
+    multiply: 100
+    icon: "mdi:water-boiler"
+
+  - platform: modbus_controller
+    modbus_controller_id: gtw08
+    name: "DHW Hysteresis"
+    address: 1198
+    use_write_multiple: false
+    unit_of_measurement: "°C"
+    device_class: temperature
+    min_value: 0
+    max_value: 15
+    step: 0.5
+    value_type: U_WORD
+    multiply: 100
+    icon: "mdi:thermometer-lines"
+
+############################## SELECTS ###############################
+select:
+  - platform: modbus_controller
+    modbus_controller_id: gtw08
+    name: "Heating Mode"
+    address: 649
+    use_write_multiple: false
+    value_type: U_WORD
+    optionsmap:
+      "Schedule": 0
+      "Manual": 1
+      "Frost Protection": 2
+    skip_updates: 2
+    icon: "mdi:calendar-clock"
+
+  - platform: modbus_controller
+    modbus_controller_id: gtw08
+    name: "DHW Mode"
+    address: 1161
+    use_write_multiple: true
+    value_type: U_WORD
+    optionsmap:
+      "Schedule": 0
+      "Manual": 1
+      "Frost Protection": 2
+    skip_updates: 2
+    icon: "mdi:calendar-clock"
+
+############################## TEXT SENSORS ##########################
+text_sensor:
+  - platform: modbus_controller
+    modbus_controller_id: gtw08
+    name: "Status"
+    address: 411
+    register_type: holding
+    bitmask: 0
+    raw_encode: HEXBYTES
+    icon: "mdi:information-outline"
+    lambda: |-
+      uint8_t value = modbus_controller::word_from_hex_str(x, 0);
+      switch (value) {
+        case 0:  return std::string("Standby");
+        case 1:  return std::string("Heat Demand");
+        case 2:  return std::string("Generator Start");
+        case 3:  return std::string("Heating CH");
+        case 4:  return std::string("Heating DHW");
+        case 5:  return std::string("Generator Stop");
+        case 6:  return std::string("Pump Post Run");
+        case 7:  return std::string("Cooling Active");
+        case 8:  return std::string("Controlled Stop");
+        case 9:  return std::string("Blocking Mode");
+        case 10: return std::string("Locking Mode");
+        case 11: return std::string("Load Test Min");
+        case 12: return std::string("Load Test CH Max");
+        case 13: return std::string("Load Test DHW Max");
+        case 15: return std::string("Manual Heat Demand");
+        case 16: return std::string("Frost Protection");
+        case 17: return std::string("Deaeration");
+        case 18: return std::string("Control Unit Cooling");
+        case 19: return std::string("Reset In Progress");
+        case 20: return std::string("Auto Filling");
+        case 21: return std::string("Halted");
+        case 22: return std::string("Forced Calibration");
+        case 23: return std::string("Factory Test");
+        case 24: return std::string("Hydronic Balancing");
+        case 200: return std::string("Device Mode");
+        case 254: return std::string("Unknown");
+        default: return std::string("Unknown (" + std::to_string(value) + ")");
+      }
+
+  - platform: modbus_controller
+    modbus_controller_id: gtw08
+    name: "Substatus"
+    address: 412
+    register_type: holding
+    bitmask: 0
+    raw_encode: HEXBYTES
+    icon: "mdi:information"
+    lambda: |-
+      uint8_t value = modbus_controller::word_from_hex_str(x, 0);
+      switch (value) {
+        case 0:  return std::string("Standby");
+        case 1:  return std::string("Anti-short Cycle");
+        case 30: return std::string("Normal Operation");
+        case 31: return std::string("Internal Setpoint Limited");
+        case 60: return std::string("Pump Post-run");
+        case 62: return std::string("3-Way Valve to DHW");
+        case 65: return std::string("Compressor Relieved");
+        case 66: return std::string("HP Tmax - Backup On");
+        case 67: return std::string("Outdoor Limit - HP Off");
+        case 68: return std::string("HP Stop by Hybrid");
+        case 69: return std::string("Defrost with HP");
+        case 70: return std::string("Defrost with Backup");
+        case 71: return std::string("Defrost HP + Backup");
+        case 75: return std::string("HP Off High Humidity");
+        case 76: return std::string("HP Off Water Flow");
+        case 78: return std::string("Humidity Setpoint");
+        case 88: return std::string("BL Backup Off");
+        case 89: return std::string("BL HP Off");
+        case 90: return std::string("BL HP + Backup Off");
+        case 91: return std::string("Low Tariff");
+        case 92: return std::string("PV with HP");
+        case 93: return std::string("PV HP + Backup");
+        case 94: return std::string("Smart Grid");
+        default: return std::string("Code " + std::to_string(value));
+      }
+
+  - platform: modbus_controller
+    modbus_controller_id: gtw08
+    name: "Heating Activity"
+    address: 1109
+    register_type: holding
+    bitmask: 0
+    raw_encode: HEXBYTES
+    icon: "mdi:radiator"
+    lambda: |-
+      uint8_t value = modbus_controller::word_from_hex_str(x, 0);
+      switch (value) {
+        case 0: return std::string("Off");
+        case 1: return std::string("Heating");
+        case 2: return std::string("Cooling");
+        default: return std::string("Unknown");
+      }
+
+  - platform: modbus_controller
+    modbus_controller_id: gtw08
+    name: "DHW Activity"
+    address: 1619
+    register_type: holding
+    bitmask: 0
+    raw_encode: HEXBYTES
+    icon: "mdi:water-boiler"
+    lambda: |-
+      uint8_t value = modbus_controller::word_from_hex_str(x, 0);
+      switch (value) {
+        case 0: return std::string("Frost Protection");
+        case 1: return std::string("ECO");
+        case 2: return std::string("Comfort");
+        case 3: return std::string("Anti-legionella");
+        default: return std::string("Unknown");
+      }
+
+  - platform: modbus_controller
+    modbus_controller_id: gtw08
+    name: "DHW Operating Mode"
+    address: 1620
+    register_type: holding
+    bitmask: 0
+    raw_encode: HEXBYTES
+    icon: "mdi:calendar-clock"
+    lambda: |-
+      uint8_t value = modbus_controller::word_from_hex_str(x, 0);
+      switch (value) {
+        case 0: return std::string("Schedule");
+        case 1: return std::string("Manual");
+        case 2: return std::string("Off");
+        case 3: return std::string("Temporary");
+        default: return std::string("Unknown");
+      }
+
+  - platform: modbus_controller
+    modbus_controller_id: gtw08
+    name: "Seasonal Mode"
+    address: 385
+    register_type: holding
+    bitmask: 0
+    raw_encode: HEXBYTES
+    icon: "mdi:weather-partly-cloudy"
+    lambda: |-
+      uint8_t value = modbus_controller::word_from_hex_str(x, 0);
+      switch (value) {
+        case 0: return std::string("Winter");
+        case 1: return std::string("Frost Protection");
+        case 2: return std::string("Summer Neutral Band");
+        case 3: return std::string("Summer");
+        default: return std::string("Unknown");
+      }
